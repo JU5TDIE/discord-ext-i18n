@@ -8,6 +8,7 @@ from discord.http import HTTPClient
 from discord.interactions import InteractionResponse
 from discord.webhook.async_ import AsyncWebhookAdapter, WebhookMessage
 from discord.ui import Modal
+from discord.http import MultipartParameters
 
 from discord.ext.i18n.language import Language
 from discord.ext.i18n.preprocess import (
@@ -60,7 +61,10 @@ def wrap_i18n_editer(edit_func: InterfaceOverridable):
 
 
 def i18n_HTTPClient_edit_message(
-    self: HTTPClient, channel_id: Snowflake, message_id: Snowflake, **fields: Any
+    self: HTTPClient,
+    channel_id: Snowflake,
+    message_id: Snowflake,
+    params: MultipartParameters,
 ):
     """
     An override for `HTTPClient.edit_message` whereas it extracts extra
@@ -69,13 +73,15 @@ def i18n_HTTPClient_edit_message(
     Language data is only appended when the recieving channel has affiliations
     with a guild.
     """
-    if fields["content"]:
-        content, lang = TranslationAgent.decode_lang_str(fields["content"])
+    content = params.payload.get('content')
+    if content:
+        content, lang = TranslationAgent.decode_lang_str(content)
         if lang:
-            fields, fields["content"] = TranslationAgent.translate_payload(
-                lang, fields, content, **Agent.translate_config()
+            payload, content = TranslationAgent.translate_payload(
+                lang, params.payload, content, **Agent.translate_config()
             )
-    return HTTPClient_edit_message(self, channel_id, message_id, **fields)
+            payload['content'] = content
+    return HTTPClient_edit_message(self, channel_id, message_id, params=params)
 
 
 def wrap_i18n_sender(send_func: InterfaceOverridable):
@@ -102,21 +108,21 @@ def wrap_i18n_sender(send_func: InterfaceOverridable):
 def i18n_HTTPClient_send_message(
     self: HTTPClient,
     channel_id: Snowflake,
-    content: Optional[str],
-    *_,
-    **kwds,
+    params: MultipartParameters,
 ):
     """
     Intercepts the excess language suffix from the content field if it exists
     and performs translation.
     """
+    content = params.payload.get('content')
     if content:
-        payload, lang = TranslationAgent.decode_lang_str(content)
+        content, lang = TranslationAgent.decode_lang_str(content)
         if lang:
-            kwds, content = TranslationAgent.translate_payload(
-                lang, kwds, payload, **Agent.translate_config()
+            payload, content = TranslationAgent.translate_payload(
+                lang, params.payload, content, **Agent.translate_config()
             )
-    return HTTPClient_send_message(self, channel_id, content, **kwds)
+            payload['content'] = content
+    return HTTPClient_send_message(self, channel_id, params=params)
 
 
 def i18n_Adapter_create_interaction_response(self: AsyncWebhookAdapter, *args, **kwds):
@@ -124,17 +130,20 @@ def i18n_Adapter_create_interaction_response(self: AsyncWebhookAdapter, *args, *
     An override for `AsyncWebhookAdapter.create_interaction_response` whereby
     extracting language encoding if it exists and translates accordingly.
     """
-    if kwds["data"] and ("content" in kwds["data"] or "title" in kwds["data"]):
-        content_type = "content" if "content" in kwds["data"] else "title"
-        content, lang = TranslationAgent.decode_lang_str(kwds["data"][content_type])
+    if kwds['params']:
+        params: MultipartParameters = kwds['params']
+        data = params.payload.get('data')
+        if data and ("content" in data or "title" in data):
+            content_type = "content" if "content" in data else "title"
+            content, lang = TranslationAgent.decode_lang_str(data[content_type])
 
-        if lang:
-            (
-                kwds["data"],
-                kwds["data"][content_type],
-            ) = TranslationAgent.translate_payload(
-                lang, kwds["data"], content, **Agent.translate_config()
-            )
+            if lang:
+                (
+                    data,
+                    data[content_type],
+                ) = TranslationAgent.translate_payload(
+                    lang, data, content, **Agent.translate_config()
+                )
     return AsyncWebhookAdapter_create_interaction_response(self, *args, **kwds)
 
 
@@ -366,6 +375,9 @@ class Agent:
             "execute_webhook",
             i18n_AsyncWebhookAdapter_execute_webhook,
         )
+        setattr(HTTPClient, "send_message", i18n_HTTPClient_send_message)
+        setattr(HTTPClient, "edit_message", i18n_HTTPClient_edit_message)
+        setattr(InteractionResponse, "send_modal", i18n_InteractionResponse_send_modal)
         if handle_webhooks:
             setattr(Webhook, "send", wrap_i18n_sender(Webhook_send))
         setattr(Messageable, "send", wrap_i18n_sender(Messageable_send))
@@ -374,7 +386,6 @@ class Agent:
             "send_message",
             wrap_i18n_sender(InteractionResponse_send_message),
         )
-        setattr(HTTPClient, "send_message", i18n_HTTPClient_send_message)
         setattr(Message, "edit", wrap_i18n_editer(Message_edit))
         setattr(
             InteractionResponse,
