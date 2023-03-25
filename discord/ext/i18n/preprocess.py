@@ -1,22 +1,14 @@
 from traceback import print_exception
 from googletrans import Translator as GoogleTranslator
 from typing import Any, Dict, List, Optional
-from enum import Enum
 from string import ascii_letters, punctuation, whitespace
+from discord.enums import ComponentType
 
 from .cache import Cache
 from .language import CODEBLOCK_LANGS, LANG_CODE2NAME, Language
 
 punctuation += f"{whitespace}\u200b"
 trailing_punctuation = punctuation.replace("?", "")
-
-
-class ComponentType(Enum):
-    action_row = 1
-    button = 2
-    select = 3
-    input_text = 4
-
 
 class Translator:
     antecedent = GoogleTranslator()
@@ -189,29 +181,30 @@ class TranslationAgent:
                             translate_buttons
                             and item["type"] == ComponentType.button.value
                         ):
-                            if item["label"]:
+                            if item.get("label"):
                                 item["label"] = agent.translate(item["label"])
                         elif (
                             translate_selects
-                            and item["type"] == ComponentType.select.value
+                            and (item["type"] in [ComponentType.select.value, ComponentType.user_select.value, ComponentType.role_select.value, ComponentType.mentionable_select.value, ComponentType.channel_select.value])
                         ):
-                            if "placeholder" in item and item["placeholder"]:
+                            if item.get("placeholder"):
                                 item["placeholder"] = agent.translate(
                                     item["placeholder"]
                                 )
-                            for opt in item["options"]:
-                                opt["label"] = agent.translate(opt["label"])
+                            if item.get("options"):
+                                for opt in item["options"]:
+                                    opt["label"] = agent.translate(opt["label"])
                         elif (
                             translate_modals
-                            and item["type"] == ComponentType.input_text.value
+                            and item["type"] == ComponentType.text_input.value
                         ):
-                            if item["label"]:
+                            if item.get("label"):
                                 item["label"] = agent.translate(item["label"])
-                            if "placeholder" in item and item["placeholder"]:
+                            if item.get("placeholder"):
                                 item["placeholder"] = agent.translate(
                                     item["placeholder"]
                                 )
-                            if "value" in item and item["value"]:
+                            if item.get("value"):
                                 item["value"] = agent.translate(item["value"])
 
                     payload["components"][i] = row
