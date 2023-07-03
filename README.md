@@ -1,8 +1,4 @@
-# A [PyCord](https://github.com/Pycord-Development/pycord) extension for internationalization
-
-<a href="https://discord.gg/UmnzdPgn6g"><img src="https://img.shields.io/badge/GET SUPPORT-DISCORD-orange?style=for-the-badge&logo=discord&logoColor=white&color=5865F2"></a>
-<a href="https://github.com/Pycord-Development/pycord"><img src="https://img.shields.io/badge/Pycord-%3E=2.0.0b5-orange?style=for-the-badge&logo=python&logoColor=white"></a>
-<a href="https://pypi.org/project/discord-ext-i18n"><img src="https://img.shields.io/pypi/v/discord-ext-i18n?style=for-the-badge&logo=pypi&logoColor=white&color=green"></a>
+# [discord.py](https://github.com/Rapptz/discord.py) extension for internationalization
 
 ## Key Features
 
@@ -41,7 +37,7 @@ This extension is relatively new so please report any bugs at [issues](https://g
 
 ## Installing
 
-This is an extension for `PyCord`. It is recommended that there exists an installation of `py-cord>=2.0.0b5`.
+This is an extension for `discord.py`. It is recommended that there exists an installation of `discord.py>=2.0.0`.
 
 To install this extension, run the following command:
 
